@@ -27,6 +27,7 @@ router.post(
       items,
       shippingAddress: body.shippingAddress,
     });
+    await repository.notifications.create({ userId: req.user._id, type: "order.created", title: "Order received", body: `Order ${order._id} was created successfully.`, data: { orderId: order._id } });
     res.status(201).json({ success: true, order });
   })
 );
@@ -49,6 +50,7 @@ router.patch(
     if (!statuses.has(status)) throw new ErrorHandler("Invalid order status", 400);
     const order = await repository.orders.updateStatus(req.params.id, status);
     if (!order) throw new ErrorHandler("Order not found", 404);
+    await repository.notifications.create({ userId: order.customerId, type: "order.status", title: "Order updated", body: `Your order is now ${status}.`, data: { orderId: order._id, status } });
     res.status(200).json({ success: true, order });
   })
 );

@@ -8,7 +8,7 @@ Goodsly is a multi-vendor sports and performance-gear storefront built with Reac
 
 ## Current status
 
-The repository contains a working storefront and API foundation. Implemented behavior is listed below; advanced platform capabilities from the long-term case study are intentionally listed as roadmap items until their code, tests, and production configuration exist.
+The repository contains a working storefront and API foundation with optional integrations that fail clearly when credentials are absent.
 
 ### Implemented
 
@@ -22,20 +22,19 @@ The repository contains a working storefront and API foundation. Implemented beh
 - Admin order summary and status management
 - MongoDB persistence with a development fallback repository
 - CORS, bounded JSON parsing, centralized API errors, and health endpoint
+- Helmet security headers and API rate limiting
+- Socket.IO authenticated buyer/seller chat with persisted history
+- In-app notifications, Web Push subscription endpoint, and service worker
+- Seller analytics, multipart image uploads with Cloudinary or explicit local fallback
+- Payment provider abstraction with Stripe intents and signed webhook validation; PayPal configuration is detected but not silently simulated
+- Docker and GitHub Actions CI workflow
 - Local setup configuration and MongoDB Atlas example configuration
 
-### Roadmap
+### Limitations
 
-These capabilities are documented as the next implementation milestones, not as completed features:
-
-- Buyer-seller real-time messaging with Socket.IO
-- In-app and browser push notifications
-- Stripe and PayPal payment providers with webhook verification
-- Seller revenue and product analytics
-- Cloudinary or S3 image upload pipeline
-- Redis-backed WebSocket scaling
-- CI/CD workflows, Docker, and production deployment
-- Expanded monitoring, audit logging, request validation, and security hardening
+- Web Push subscriptions currently acknowledge valid subscriptions; durable subscription fan-out should be connected to a production notification worker.
+- PayPal requires a provider SDK/API adapter before it can create or verify payments.
+- The JSON repository is a development fallback; production should use MongoDB.
 
 See the complete architecture and delivery plan in [CASE-STUDY.md](./CASE-STUDY.md).
 
@@ -121,6 +120,14 @@ Goodsly/
 | GET | `/api/v1/orders` | List the current user's orders |
 | PATCH | `/api/v1/orders/:id/status` | Update an order as seller/admin |
 | GET | `/api/v1/admin/summary` | View admin sales summary |
+| GET/POST | `/api/v1/chat/conversations` | List or create chat conversations |
+| GET/POST | `/api/v1/chat/conversations/:id/messages` | Read or send messages |
+| GET/PATCH | `/api/v1/notifications` | Read and acknowledge in-app notifications |
+| GET | `/api/v1/analytics/seller` | Seller-scoped revenue and inventory metrics |
+| POST | `/api/v1/uploads` | Upload an image through Cloudinary or local fallback |
+| POST | `/api/v1/payments/checkout` | Create a configured Stripe payment intent |
+| POST | `/api/v1/payments/webhooks/stripe` | Verify Stripe webhook signatures |
+| GET | `/api/v1/push/config` | Check Web Push configuration |
 
 ## Validation
 

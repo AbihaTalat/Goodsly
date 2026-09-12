@@ -2,7 +2,7 @@
 
 ## Executive summary
 
-Goodsly is a React and Express commerce platform for performance clothing and sports equipment. It combines a visual storefront with JWT-authenticated customer, seller, and admin workspaces. The current release provides catalogue discovery, product colorway presentation, cart and checkout flows, seller publishing, administrative order operations, and MongoDB-backed persistence.
+Goodsly is a React and Express commerce platform for performance clothing and sports equipment. It combines a visual storefront with JWT-authenticated customer, seller, and admin workspaces. The current release provides catalogue discovery, product colorway presentation, cart and checkout flows, seller publishing, administrative order operations, real-time chat, notifications, analytics, optional payments/media integrations, and MongoDB-backed persistence.
 
 This document separates shipped functionality from planned platform extensions. That distinction keeps the case study technically accurate while showing how Goodsly can grow into the complete multi-vendor architecture.
 
@@ -155,43 +155,43 @@ Authentication is enforced by middleware that verifies a JWT and attaches the pu
 | Configuration | dotenv |
 | Frontend state | React state and local storage for cart/wishlist |
 
-### Planned platform extensions
+### Optional platform extensions
 
 | Capability | Proposed technology |
 | --- | --- |
-| Real-time chat | Socket.IO, MongoDB message history, Redis adapter |
-| Payments | Stripe and PayPal provider adapters, signed webhooks |
-| Media | Cloudinary or Amazon S3 |
-| Push notifications | Web Push and service workers |
-| Analytics | MongoDB aggregation pipelines and Recharts |
-| Delivery | Docker, GitHub Actions, managed MongoDB/Redis |
+| Real-time chat | Socket.IO with authenticated rooms and persisted message history (Redis adapter remains a scale-out option) |
+| Payments | Stripe payment intents and signed webhook verification; PayPal configuration is detected and fails clearly until its API adapter is supplied |
+| Media | Cloudinary upload stream with validated local data-URL fallback |
+| Push notifications | In-app notification APIs, Web Push configuration/subscription endpoint, and service worker |
+| Analytics | Seller-scoped repository metrics and dashboard cards |
+| Delivery | Docker, docker-compose, and GitHub Actions CI |
 | Monitoring | Sentry, structured logs, uptime checks |
 
 ## Advanced architecture roadmap
 
 ### Real-time messaging
 
-Add `Conversation` and `Message` models, authenticated Socket.IO connections, conversation rooms, message persistence, read receipts, typing indicators, and REST history endpoints. The server must derive the sender from the verified socket identity rather than trusting a client-supplied user ID.
+`Conversation` and `Message` models, authenticated Socket.IO connections, conversation rooms, message persistence, and REST history endpoints are implemented. The server derives the sender from the verified socket identity rather than trusting a client-supplied user ID. Read receipts and typing indicators remain follow-up enhancements.
 
 ### Payments
 
-Introduce a provider interface with Stripe and PayPal adapters. The backend should calculate totals from database prices, create payment intents, verify signed webhooks, and only mark orders paid after provider confirmation. Orders should gain `paymentProvider`, `paymentIntentId`, `paymentStatus`, `currency`, and `paidAt`.
+The payment service exposes a provider interface, creates Stripe payment intents, and verifies signed Stripe webhooks. Credentials are mandatory and missing configuration returns a clear 503/501 rather than fake success. PayPal order creation and verification remains an explicit integration limitation.
 
 ### Notifications
 
-Add persisted in-app notifications for new orders, status changes, messages, and inventory events. Add browser push subscriptions through a service worker and VAPID keys stored only in environment configuration.
+Persisted in-app notifications and read APIs are implemented, with Web Push VAPID configuration, subscription validation, and a service worker. A production worker should connect subscriptions to fan-out delivery.
 
 ### Seller analytics
 
-Add seller-scoped aggregation endpoints for revenue, order count, average order value, product performance, inventory, and time-series reporting. Render those metrics in a dedicated seller analytics workspace.
+Seller-scoped revenue, order, units, and inventory metrics are exposed through `/analytics/seller` and rendered in the seller workspace. Time-series charts can be added without changing the endpoint boundary.
 
 ### Cloud media
 
-Replace URL-only product images with validated multipart uploads. The backend should enforce seller authorization, MIME type, file size, dimensions, and image count before storing cloud URLs and provider public IDs.
+Multipart uploads enforce seller authorization, image MIME type, and a 5 MB limit. Cloudinary stores production assets when configured; otherwise the API returns an explicit local data URL suitable for development.
 
 ## Security and reliability plan
 
-The current application has JWT role checks, bcrypt password hashing, CORS allowlisting, bounded request parsing, and centralized errors. Before production, add:
+The current application has JWT role checks, bcrypt password hashing, CORS allowlisting, bounded request parsing, centralized errors, Helmet, and rate limiting. Before production, add:
 
 - Strong required JWT secrets and secret management
 - Request schema validation and sanitization
