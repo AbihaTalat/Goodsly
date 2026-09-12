@@ -16,7 +16,7 @@ const supportRateLimit = rateLimit({
 const MAX_MESSAGE_LENGTH = 2000;
 const MAX_HISTORY_ITEMS = 6;
 const MAX_HISTORY_ITEM_LENGTH = 1000;
-const MODEL = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+const MODEL = process.env.GEMINI_MODEL || "gemini-3.6-flash";
 
 const SYSTEM_PROMPT = `You are Goodsly Support, a concise and friendly customer-support agent for the Goodsly sports and performance-gear storefront.
 Only answer questions about Goodsly products, catalogue availability, sizing guidance, orders, shipping, delivery, returns, exchanges, checkout, and account help.

@@ -8,7 +8,7 @@ This document separates shipped functionality from planned platform extensions. 
 
 ### AI support agent
 
-The Shop page includes a compact SupportAgent widget backed by `POST /api/v1/ai/support`. The public endpoint is IP rate-limited and accepts bounded conversation history. The server calls Gemini through its REST API using the server-only `GEMINI_API_KEY`, injects a bounded snapshot of repository products as context, and applies a system prompt restricted to Goodsly catalogue, orders, shipping, checkout, and returns support. Missing credentials return `503`; the agent cannot mutate orders or access account data.
+The Shop page includes a compact SupportAgent widget backed by `POST /api/v1/ai/support`. The public endpoint is IP rate-limited and accepts bounded conversation history. The server calls Gemini 3.6 Flash through its REST API using the server-only `GEMINI_API_KEY`, injects a bounded snapshot of repository products as context, and applies a system prompt restricted to Goodsly catalogue, orders, shipping, checkout, and returns support. Missing credentials return `503`; the agent cannot mutate orders or access account data.
 
 ## Goals
 

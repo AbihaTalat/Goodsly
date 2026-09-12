@@ -130,7 +130,7 @@ Goodsly/
 | POST | `/api/v1/payments/checkout` | Create a configured Stripe payment intent |
 | POST | `/api/v1/payments/webhooks/stripe` | Verify Stripe webhook signatures |
 | GET | `/api/v1/push/config` | Check Web Push configuration |
-| POST | `/api/v1/ai/support` | Public, rate-limited Gemini support for Goodsly catalogue, orders, shipping, and returns |
+| POST | `/api/v1/ai/support` | Public, rate-limited Gemini 3.6 Flash support for Goodsly catalogue, orders, shipping, and returns |
 
 The support endpoint validates message size, includes a bounded catalogue snapshot from the repository, and uses a restricted system prompt. It does not perform account or order mutations; customers should contact the Goodsly team for account-specific actions.
 
