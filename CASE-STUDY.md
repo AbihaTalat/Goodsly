@@ -144,7 +144,7 @@ The API is organized by business capability:
 - `/api/v1/products` — public listing plus seller/admin publishing and management
 - `/api/v1/orders` — authenticated order creation, listing, and status updates
 - `/api/v1/admin` — admin-only summary and order operations
-- `/api/v1/health` — deployment health signal
+- `/api/v1/live` and `/api/v1/ready` — liveness/readiness deployment probes; `/api/v1/health` is the diagnostic signal
 - `/api/v1/ai/support` — public, rate-limited Gemini support endpoint
 
 Authentication is enforced by middleware that verifies a JWT and attaches the public user to the request. Role authorization is applied to seller and admin routes.
@@ -158,7 +158,7 @@ Authentication is enforced by middleware that verifies a JWT and attaches the pu
 | Frontend | React 19, React Router, React Icons, Create React App |
 | Backend | Node.js, Express 5 |
 | Persistence | MongoDB, Mongoose, development JSON repository |
-| Authentication | JWT, bcrypt |
+| Authentication | bcrypt, short-lived JWT access tokens, hashed rotating refresh tokens, secure cookies |
 | Configuration | dotenv |
 | Frontend state | React state and local storage for cart/wishlist |
 | AI support | Gemini REST API via server-side `fetch` (no SDK dependency) |
@@ -168,12 +168,12 @@ Authentication is enforced by middleware that verifies a JWT and attaches the pu
 | Capability | Proposed technology |
 | --- | --- |
 | Real-time chat | Socket.IO with authenticated rooms and persisted message history (Redis adapter remains a scale-out option) |
-| Payments | Stripe payment intents and signed webhook verification; PayPal configuration is detected and fails clearly until its API adapter is supplied |
+| Payments | Backend-calculated order totals, Stripe payment intents and idempotent signed webhooks, PayPal REST create/capture/refund |
 | Media | Cloudinary upload stream with validated local data-URL fallback |
 | Push notifications | In-app notification APIs, Web Push configuration/subscription endpoint, and service worker |
 | Analytics | Seller-scoped repository metrics and dashboard cards |
 | Delivery | Docker, docker-compose, and GitHub Actions CI |
-| Monitoring | Sentry, structured logs, uptime checks |
+| Monitoring | Pino/Pino HTTP redacted logs, health probes, uptime checks |
 
 ## Advanced architecture roadmap
 
@@ -183,7 +183,7 @@ Authentication is enforced by middleware that verifies a JWT and attaches the pu
 
 ### Payments
 
-The payment service exposes a provider interface, creates Stripe payment intents, and verifies signed Stripe webhooks. Credentials are mandatory and missing configuration returns a clear 503/501 rather than fake success. PayPal order creation and verification remains an explicit integration limitation.
+The payment service exposes a provider interface, calculates the amount from the persisted order, creates Stripe intents or PayPal REST orders, and persists `PaymentEvent` records with a unique provider event ID. Signed Stripe events update the order to succeeded, failed, or refunded exactly once. PayPal webhooks remain disabled until signature verification is configured; capture and refund routes never simulate provider success.
 
 ### Notifications
 
@@ -199,16 +199,11 @@ Multipart uploads enforce seller authorization, image MIME type, and a 5 MB limi
 
 ## Security and reliability plan
 
-The current application has JWT role checks, bcrypt password hashing, CORS allowlisting, bounded request parsing, centralized errors, Helmet, and rate limiting. Before production, add:
+The current application has JWT role checks, bcrypt password hashing, CORS allowlisting, bounded request parsing, centralized errors, Helmet, rate limiting, production secret validation, secure refresh-token rotation/revocation, explicit reset/verification token flows, and redacted structured logs. Remaining deployment work includes:
 
-- Strong required JWT secrets and secret management
 - Request schema validation and sanitization
-- Helmet security headers and rate limiting
-- Refresh-token rotation, email verification, and password reset
-- Signed payment webhooks
 - Upload scanning and file restrictions
-- Structured logs, audit trails, Sentry, and dependency monitoring
-- Automated tests for authorization, stock, order totals, and webhook idempotency
+- Audit trails, Sentry, and dependency monitoring
 
 ## CI/CD and deployment plan
 
@@ -216,13 +211,17 @@ The current application has JWT role checks, bcrypt password hashing, CORS allow
 flowchart LR
     Commit[Git push or pull request] --> CI[GitHub Actions]
     CI --> Install[Install dependencies]
-    Install --> Checks[Lint, test, build]
+    Install --> Checks[Backend tests, syntax checks, frontend build]
     Checks --> Image[Build Docker image]
     Image --> Deploy[Deploy staging/production]
     Deploy --> Health[Health and smoke checks]
 ```
 
 The recommended deployment separates the React static build from the API service. MongoDB Atlas, object storage, Redis, payment providers, and monitoring should be managed services with environment-specific credentials.
+
+### Backup and recovery runbook
+
+Use Atlas continuous backups or `mongodump --uri "$DB_URL" --archive=backup.archive --gzip` with encrypted, access-controlled storage. Test a restore quarterly. For an incident, deploy the last known image, restore into an isolated MongoDB database, run `/api/v1/ready`, replay Stripe events (unique `PaymentEvent.eventId` makes this idempotent), then switch traffic. Password-reset and email-verification delivery is intentionally deployment-specific; configure an SMTP/worker integration and do not expose tokens in production responses.
 
 ## Challenges and solutions
 
@@ -245,12 +244,12 @@ Authentication and role authorization are separate middleware concerns. This kee
 - [x] Centralized error response format
 - [x] Role-aware access control
 - [x] MongoDB connection configuration
-- [ ] Automated test suite for core API behavior
-- [ ] Payment provider abstraction and webhook tests
+- [x] Automated tests for health, auth, authorization, AI missing-key, upload authorization, and payment-event idempotency
+- [x] Payment provider abstraction, Stripe webhook handling, and PayPal REST adapter
 - [ ] Real-time chat authorization and persistence
 - [ ] Cloud upload validation
 - [ ] Production CI/CD and monitoring
 
 ## Conclusion
 
-Goodsly currently delivers the foundation of a multi-vendor commerce product: a refined storefront, role-aware API, product publishing, order operations, and MongoDB support. The architecture diagrams and roadmap define the path to the full case-study platform without presenting unbuilt capabilities as shipped functionality.
+Goodsly delivers a production-oriented multi-vendor commerce foundation: a refined storefront, role-aware API, backend-priced orders, persisted payment lifecycle, secure authentication, observability, health probes, and deployment documentation. Provider-specific webhook credentials, SMTP delivery, MongoDB, and managed infrastructure remain deployment responsibilities and are not silently faked.

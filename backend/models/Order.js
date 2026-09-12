@@ -13,6 +13,19 @@ const orderSchema = new mongoose.Schema(
       },
     ],
     total: { type: Number, min: 0, required: true },
+    currency: { type: String, default: "usd", uppercase: true, trim: true },
+    payment: {
+      provider: { type: String, enum: ["stripe", "paypal"] },
+      paymentId: String,
+      status: {
+        type: String,
+        enum: ["unpaid", "pending", "succeeded", "failed", "refunded"],
+        default: "unpaid",
+      },
+      failureReason: String,
+      paidAt: Date,
+      refundedAt: Date,
+    },
     shippingAddress: mongoose.Schema.Types.Mixed,
     status: {
       type: String,

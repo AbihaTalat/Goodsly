@@ -16,7 +16,7 @@ The repository contains a working storefront and API foundation with optional in
 - Product categories, text search, tags, and color-aware filtering
 - Named color swatches in catalogue cards and product details
 - Cart, quantity controls, wishlist, and checkout form
-- Customer, seller, and admin authentication with JWT
+- Customer, seller, and admin authentication with short-lived JWT access tokens, hashed rotating refresh tokens, secure cookies, password reset and email verification token flows
 - Password hashing with bcrypt
 - Seller product publishing
 - Admin order summary and status management
@@ -26,16 +26,17 @@ The repository contains a working storefront and API foundation with optional in
 - Socket.IO authenticated buyer/seller chat with persisted history
 - In-app notifications, Web Push subscription endpoint, and service worker
 - Seller analytics, multipart image uploads with Cloudinary or explicit local fallback
-- Payment provider abstraction with Stripe intents and signed webhook validation; PayPal configuration is detected but not silently simulated
+- Backend-calculated order totals with persisted payment lifecycle, idempotent Stripe webhook events for success/failure/refunds, and a PayPal REST create/capture/refund adapter
 - Gemini-powered public support agent on the Shop page for scoped product, order, shipping, and returns questions
-- Docker and GitHub Actions CI workflow
+- Structured Pino request logging with redaction, live/ready health endpoints, optional Redis Socket.IO adapter, Docker and GitHub Actions CI workflow
 - Local setup configuration and MongoDB Atlas example configuration
 
 ### Limitations
 
 - Web Push subscriptions currently acknowledge valid subscriptions; durable subscription fan-out should be connected to a production notification worker.
-- PayPal requires a provider SDK/API adapter before it can create or verify payments.
+- PayPal webhooks are intentionally not accepted until provider signature verification is configured; PayPal capture/refund routes use the REST API.
 - The JSON repository is a development fallback; production should use MongoDB.
+- Password reset and verification delivery requires an SMTP/notification worker; development token output is opt-in and disabled in production.
 
 See the complete architecture and delivery plan in [CASE-STUDY.md](./CASE-STUDY.md).
 
@@ -113,9 +114,16 @@ Goodsly/
 
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
-| GET | `/api/v1/health` | API and storage health |
+| GET | `/api/v1/live` | Liveness probe |
+| GET | `/api/v1/ready` | Readiness probe for MongoDB/configuration |
+| GET | `/api/v1/health` | API, database, and storage health |
 | POST | `/api/v1/auth/register` | Create a customer or seller account |
 | POST | `/api/v1/auth/login` | Authenticate a user |
+| POST | `/api/v1/auth/refresh` | Rotate a secure refresh cookie and issue an access token |
+| POST | `/api/v1/auth/logout` | Revoke the refresh token |
+| POST | `/api/v1/auth/forgot-password` | Start a password reset (delivery is deployment-configured) |
+| POST | `/api/v1/auth/reset-password` | Consume a one-time password reset token |
+| POST | `/api/v1/auth/verify-email` | Consume a one-time email verification token |
 | GET | `/api/v1/products` | List and filter products |
 | POST | `/api/v1/products` | Publish a product as seller/admin |
 | POST | `/api/v1/orders` | Create an authenticated order |
@@ -127,12 +135,22 @@ Goodsly/
 | GET/PATCH | `/api/v1/notifications` | Read and acknowledge in-app notifications |
 | GET | `/api/v1/analytics/seller` | Seller-scoped revenue and inventory metrics |
 | POST | `/api/v1/uploads` | Upload an image through Cloudinary or local fallback |
-| POST | `/api/v1/payments/checkout` | Create a configured Stripe payment intent |
-| POST | `/api/v1/payments/webhooks/stripe` | Verify Stripe webhook signatures |
+| POST | `/api/v1/payments/checkout` | Create a payment against the server-calculated order total |
+| POST | `/api/v1/payments/paypal/:paypalOrderId/capture` | Capture a PayPal order |
+| POST | `/api/v1/payments/paypal/:captureId/refund` | Admin-only PayPal capture refund |
+| POST | `/api/v1/payments/webhooks/stripe` | Verify and idempotently process Stripe payment events |
 | GET | `/api/v1/push/config` | Check Web Push configuration |
 | POST | `/api/v1/ai/support` | Public, rate-limited Gemini 3.6 Flash support for Goodsly catalogue, orders, shipping, and returns |
 
 The support endpoint validates message size, includes a bounded catalogue snapshot from the repository, and uses a restricted system prompt. It does not perform account or order mutations; customers should contact the Goodsly team for account-specific actions.
+
+## Deployment, backup, and recovery runbook
+
+1. Set `NODE_ENV=production`, a 32+ character random `JWT_SECRET`, `DB_URL`, `FRONTEND_URLS`, and payment webhook secrets in a managed secret store. Never commit `.env`.
+2. Deploy the API and run `GET /api/v1/ready` as the readiness probe; use `/api/v1/live` for liveness. Production readiness fails when MongoDB or required configuration is unavailable.
+3. Configure Stripe webhook delivery for payment success, failure, and refund events. Configure PayPal REST credentials and use its capture/refund routes only after end-to-end sandbox verification.
+4. Back up MongoDB with Atlas continuous backups or `mongodump --uri "$DB_URL" --archive=backup.archive --gzip`; encrypt backups and test restores at least quarterly.
+5. Recovery: deploy the last known image, restore the backup to an isolated database, validate `/ready`, replay provider webhooks (the `PaymentEvent` unique key makes replay safe), then switch traffic and monitor structured logs.
 
 ## Validation
 

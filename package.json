@@ -7,7 +7,9 @@
   "type": "commonjs",
   "main": "backend/server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest --runInBand backend/tests",
+    "test:backend": "jest --runInBand backend/tests",
+    "build": "node --check backend/app.js && node --check backend/server.js",
     "dev": "nodemon backend/server.js",
     "start": "node backend/server.js"
   },
@@ -24,8 +26,14 @@
     "multer": "^2.3.0",
     "nodemailer": "^10.0.8",
     "nodemon": "^3.1.14",
+    "pino": "^9.7.0",
+    "pino-http": "^10.4.0",
+    "redis": "^5.0.1",
     "socket.io": "^4.8.3",
     "stripe": "^22.6.2",
-    "web-push": "^3.6.7"
+    "web-push": "^3.6.7",
+    "@socket.io/redis-adapter": "^8.3.0",
+    "jest": "^30.0.0",
+    "supertest": "^7.1.1"
   }
 }

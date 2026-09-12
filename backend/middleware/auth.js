@@ -1,8 +1,15 @@
 const jwt = require("jsonwebtoken");
 const ErrorHandler = require("../utils/ErrorHandler");
 const repository = require("../store/repository");
+const { isProduction } = require("../config/env");
 
-const secret = () => process.env.JWT_SECRET || "goodsly-development-secret";
+const secret = () => {
+  const value = String(process.env.JWT_SECRET || "");
+  if (isProduction() && (value.length < 32 || /replace|development|change-me/i.test(value))) {
+    throw new Error("JWT_SECRET is not configured securely for production");
+  }
+  return value || "goodsly-development-secret";
+};
 
 const getToken = (req) => {
   const header = req.headers.authorization;
@@ -11,6 +18,16 @@ const getToken = (req) => {
   }
   return req.cookies && (req.cookies.token || req.cookies.jwt);
 };
+
+const accessTokenTtl = () => process.env.ACCESS_TOKEN_EXPIRES_IN || process.env.JWT_EXPIRES_IN || "15m";
+const refreshCookieName = () => process.env.REFRESH_COOKIE_NAME || "goodsly_refresh";
+const refreshCookieOptions = () => ({
+  httpOnly: true,
+  secure: isProduction(),
+  sameSite: process.env.COOKIE_SAME_SITE || "lax",
+  path: "/api/v1/auth",
+  maxAge: Number(process.env.REFRESH_TOKEN_TTL_MS || 30 * 24 * 60 * 60 * 1000),
+});
 
 const authenticate = async (req, res, next) => {
   const token = getToken(req);
@@ -34,4 +51,4 @@ const authorizeRoles = (...roles) => (req, res, next) => {
   return next();
 };
 
-module.exports = { authenticate, authorizeRoles, getToken, jwtSecret: secret };
+module.exports = { authenticate, authorizeRoles, getToken, jwtSecret: secret, accessTokenTtl, refreshCookieName, refreshCookieOptions };

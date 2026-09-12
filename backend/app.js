@@ -4,6 +4,9 @@ const cookieParser = require("cookie-parser");
 const dotenv = require("dotenv");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
+const pinoHttp = require("pino-http");
+const logger = require("./utils/logger");
+const connectDatabase = require("./db/Database");
 
 dotenv.config({ path: path.join(__dirname, "config", ".env") });
 dotenv.config();
@@ -24,6 +27,7 @@ const repository = require("./store/repository");
 
 const app = express();
 app.disable("x-powered-by");
+app.use(pinoHttp({ logger, autoLogging: { ignore: (req) => req.url === "/api/v1/live" } }));
 app.use(helmet());
 app.use(rateLimit({ windowMs: 15 * 60 * 1000, limit: Number(process.env.API_RATE_LIMIT || 300), standardHeaders: "draft-7", legacyHeaders: false }));
 
@@ -53,8 +57,21 @@ app.use(express.urlencoded({ extended: false, limit: "1mb" }));
 app.use(cookieParser());
 app.use("/uploads", express.static(path.join(__dirname, "data", "uploads"), { fallthrough: false, maxAge: "1d" }));
 
+app.get("/api/v1/live", (req, res) => res.status(200).json({ success: true, status: "live" }));
+app.get("/api/v1/ready", (req, res) => {
+  const db = connectDatabase.status();
+  const configProblems = require("./config/env").validateConfiguration();
+  const dependencies = {
+    database: db.configured ? db.connected : process.env.NODE_ENV === "production" ? false : true,
+    configuration: configProblems.length === 0,
+    payments: { stripe: Boolean(process.env.STRIPE_SECRET_KEY), paypal: Boolean(process.env.PAYPAL_CLIENT_ID && process.env.PAYPAL_CLIENT_SECRET) },
+  };
+  const ready = dependencies.database && dependencies.configuration;
+  res.status(ready ? 200 : 503).json({ success: ready, status: ready ? "ready" : "not_ready", checks: dependencies });
+});
 app.get("/api/v1/health", (req, res) => {
-  const checks = { storage: repository.storage.type, node: process.version, uptimeSeconds: Math.round(process.uptime()) };
+  const db = connectDatabase.status();
+  const checks = { storage: repository.storage.type, database: db, node: process.version, uptimeSeconds: Math.round(process.uptime()) };
   res.status(200).json({ success: true, message: "Goodsly API is running", healthy: true, checks });
 });
 

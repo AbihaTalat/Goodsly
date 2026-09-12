@@ -8,6 +8,9 @@ const Order = require("../models/Order");
 const Conversation = require("../models/Conversation");
 const Message = require("../models/Message");
 const Notification = require("../models/Notification");
+const PaymentEvent = require("../models/PaymentEvent");
+const RefreshToken = require("../models/RefreshToken");
+const logger = require("../utils/logger");
 
 const storagePath = path.join(__dirname, "..", "data", "store.json");
 const loadStore = () => {
@@ -20,10 +23,12 @@ const loadStore = () => {
       conversations: new Map(Object.entries(saved.conversations || {})),
       messages: new Map(Object.entries(saved.messages || {})),
       notifications: new Map(Object.entries(saved.notifications || {})),
+      paymentEvents: new Map(Object.entries(saved.paymentEvents || {})),
+      refreshTokens: new Map(Object.entries(saved.refreshTokens || {})),
     };
   } catch (error) {
-    if (error.code !== "ENOENT") console.warn(`Could not read persistent store: ${error.message}`);
-    return { users: new Map(), products: new Map(), orders: new Map(), conversations: new Map(), messages: new Map(), notifications: new Map() };
+    if (error.code !== "ENOENT") logger.warn({ err: error }, "Could not read persistent store");
+    return { users: new Map(), products: new Map(), orders: new Map(), conversations: new Map(), messages: new Map(), notifications: new Map(), paymentEvents: new Map(), refreshTokens: new Map() };
   }
 };
 const store = loadStore();
@@ -33,7 +38,10 @@ const orders = store.orders;
 const conversations = store.conversations;
 const messages = store.messages;
 const notifications = store.notifications;
+const paymentEvents = store.paymentEvents;
+const refreshTokens = store.refreshTokens;
 const persist = () => {
+  if (String(process.env.NODE_ENV).toLowerCase() === "test") return;
   fs.mkdirSync(path.dirname(storagePath), { recursive: true });
   fs.writeFileSync(storagePath, JSON.stringify({
     users: Object.fromEntries(users),
@@ -42,6 +50,8 @@ const persist = () => {
     conversations: Object.fromEntries(conversations),
     messages: Object.fromEntries(messages),
     notifications: Object.fromEntries(notifications),
+    paymentEvents: Object.fromEntries(paymentEvents),
+    refreshTokens: Object.fromEntries(refreshTokens),
   }, null, 2));
 };
 
@@ -51,17 +61,17 @@ const clone = (value) => JSON.parse(JSON.stringify(value));
 
 const publicUser = (user) => {
   if (!user) return null;
-  const { passwordHash, ...safeUser } = user;
+  const { passwordHash, passwordResetTokenHash, passwordResetExpiresAt, emailVerificationTokenHash, emailVerificationExpiresAt, ...safeUser } = user;
   return clone(safeUser);
 };
 const mongoReady = () => mongoose.connection.readyState === 1;
 const publicMongoUser = (user) => user ? publicUser({ ...user, _id: String(user._id) }) : null;
 
 const usersRepository = {
-  async create({ name, email, passwordHash, role = "customer" }) {
+  async create({ name, email, passwordHash, role = "customer", emailVerificationTokenHash, emailVerificationExpiresAt }) {
     const normalizedEmail = email.trim().toLowerCase();
     if (mongoReady()) {
-      const user = await User.create({ name, email: normalizedEmail, passwordHash, role });
+      const user = await User.create({ name, email: normalizedEmail, passwordHash, role, emailVerificationTokenHash, emailVerificationExpiresAt });
       return publicMongoUser(user.toObject());
     }
     if ([...users.values()].some((user) => user.email === normalizedEmail)) {
@@ -75,6 +85,8 @@ const usersRepository = {
       email: normalizedEmail,
       passwordHash,
       role,
+      emailVerificationTokenHash,
+      emailVerificationExpiresAt,
       createdAt: now(),
       updatedAt: now(),
     };
@@ -89,12 +101,89 @@ const usersRepository = {
     }
     return [...users.values()].find((user) => user.email === email.trim().toLowerCase()) || null;
   },
+  async findByPasswordResetToken(tokenHash) {
+    if (mongoReady()) return User.findOne({ passwordResetTokenHash: tokenHash, passwordResetExpiresAt: { $gt: new Date() } }).select("+passwordResetTokenHash +passwordResetExpiresAt").lean();
+    return [...users.values()].find((user) => user.passwordResetTokenHash === tokenHash && new Date(user.passwordResetExpiresAt) > new Date()) || null;
+  },
+  async findByVerificationToken(tokenHash) {
+    if (mongoReady()) return User.findOne({ emailVerificationTokenHash: tokenHash, emailVerificationExpiresAt: { $gt: new Date() } }).select("+emailVerificationTokenHash +emailVerificationExpiresAt").lean();
+    return [...users.values()].find((user) => user.emailVerificationTokenHash === tokenHash && new Date(user.emailVerificationExpiresAt) > new Date()) || null;
+  },
   async findById(userId) {
     if (mongoReady()) {
       const user = await User.findById(userId).lean();
       return publicMongoUser(user);
     }
     return publicUser(users.get(userId));
+  },
+  async update(userId, input) {
+    const allowed = ["passwordHash", "passwordResetTokenHash", "passwordResetExpiresAt", "emailVerificationTokenHash", "emailVerificationExpiresAt", "emailVerifiedAt"];
+    if (mongoReady()) {
+      const update = Object.fromEntries(allowed.filter((key) => input[key] !== undefined).map((key) => [key, input[key]]));
+      return publicMongoUser(await User.findByIdAndUpdate(userId, update, { new: true }).lean());
+    }
+    const user = users.get(String(userId));
+    if (!user) return null;
+    allowed.forEach((key) => { if (input[key] !== undefined) user[key] = input[key]; });
+    user.updatedAt = now();
+    persist();
+    return publicUser(user);
+  },
+};
+
+const refreshTokensRepository = {
+  async create(input) {
+    if (mongoReady()) return (await RefreshToken.create(input)).toObject();
+    const token = { _id: id(), ...input, createdAt: now(), updatedAt: now() };
+    refreshTokens.set(token.tokenHash, token);
+    persist();
+    return clone(token);
+  },
+  async findActive(tokenHash) {
+    if (mongoReady()) return RefreshToken.findOne({ tokenHash, revokedAt: null, expiresAt: { $gt: new Date() } }).lean();
+    const token = refreshTokens.get(tokenHash);
+    return token && !token.revokedAt && new Date(token.expiresAt) > new Date() ? clone(token) : null;
+  },
+  async find(tokenHash) {
+    if (mongoReady()) return RefreshToken.findOne({ tokenHash }).lean();
+    return clone(refreshTokens.get(tokenHash) || null);
+  },
+  async revoke(tokenHash, replacedByHash) {
+    if (mongoReady()) return RefreshToken.findOneAndUpdate({ tokenHash, revokedAt: null }, { revokedAt: new Date(), ...(replacedByHash ? { replacedByHash } : {}) }, { new: true }).lean();
+    const token = refreshTokens.get(tokenHash);
+    if (!token || token.revokedAt) return null;
+    token.revokedAt = now();
+    if (replacedByHash) token.replacedByHash = replacedByHash;
+    persist();
+    return clone(token);
+  },
+  async revokeAll(userId) {
+    if (mongoReady()) return RefreshToken.updateMany({ userId, revokedAt: null }, { revokedAt: new Date() });
+    refreshTokens.forEach((token) => { if (String(token.userId) === String(userId) && !token.revokedAt) token.revokedAt = now(); });
+    persist();
+  },
+};
+
+const paymentEventsRepository = {
+  async record(input) {
+    if (mongoReady()) {
+      try {
+        return { created: true, event: (await PaymentEvent.create(input)).toObject() };
+      } catch (error) {
+        if (error.code === 11000) return { created: false, event: await PaymentEvent.findOne({ eventId: input.eventId }).lean() };
+        throw error;
+      }
+    }
+    if (paymentEvents.has(input.eventId)) return { created: false, event: clone(paymentEvents.get(input.eventId)) };
+    const event = { _id: id(), ...input, processedAt: now(), createdAt: now(), updatedAt: now() };
+    paymentEvents.set(event.eventId, event);
+    persist();
+    return { created: true, event: clone(event) };
+  },
+  async remove(eventId) {
+    if (mongoReady()) return PaymentEvent.deleteOne({ eventId });
+    paymentEvents.delete(eventId);
+    persist();
   },
 };
 
@@ -277,7 +366,7 @@ const ordersRepository = {
         await product.save();
         normalizedItems.push({ productId: product._id, name: product.name, quantity, price: product.price, subtotal: product.price * quantity });
       }
-      const order = await Order.create({ customerId, items: normalizedItems, total: normalizedItems.reduce((sum, item) => sum + item.subtotal, 0), shippingAddress });
+      const order = await Order.create({ customerId, items: normalizedItems, total: normalizedItems.reduce((sum, item) => sum + item.subtotal, 0), shippingAddress, payment: { status: "unpaid" } });
       return order.toObject();
     }
     const normalizedItems = [];
@@ -317,6 +406,7 @@ const ordersRepository = {
       total: normalizedItems.reduce((sum, item) => sum + item.subtotal, 0),
       shippingAddress: shippingAddress || null,
       status: "pending",
+      payment: { status: "unpaid" },
       createdAt: now(),
       updatedAt: now(),
     };
@@ -329,6 +419,10 @@ const ordersRepository = {
     if (mongoReady()) return Order.findById(orderId).lean();
     return clone(orders.get(orderId) || null);
   },
+  async findByPaymentId(paymentId) {
+    if (mongoReady()) return Order.findOne({ "payment.paymentId": paymentId }).lean();
+    return clone([...orders.values()].find((order) => order.payment?.paymentId === paymentId) || null);
+  },
   async list(customerId) {
     if (mongoReady()) return Order.find(customerId ? { customerId } : {}).sort({ createdAt: -1 }).lean();
     const result = [...orders.values()].filter((order) => !customerId || order.customerId === customerId);
@@ -339,6 +433,15 @@ const ordersRepository = {
     const order = orders.get(orderId);
     if (!order) return null;
     order.status = status;
+    order.updatedAt = now();
+    persist();
+    return clone(order);
+  },
+  async updatePayment(orderId, payment) {
+    if (mongoReady()) return Order.findByIdAndUpdate(orderId, { $set: Object.fromEntries(Object.entries(payment).map(([key, value]) => [`payment.${key}`, value])) }, { new: true, runValidators: true }).lean();
+    const order = orders.get(String(orderId));
+    if (!order) return null;
+    order.payment = { ...(order.payment || {}), ...payment };
     order.updatedAt = now();
     persist();
     return clone(order);
@@ -373,6 +476,8 @@ module.exports = {
   orders: ordersRepository,
   chat: chatRepository,
   notifications: notificationRepository,
+  refreshTokens: refreshTokensRepository,
+  paymentEvents: paymentEventsRepository,
   analytics: analyticsRepository,
   publicUser,
   storage: {

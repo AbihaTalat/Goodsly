@@ -1,10 +1,12 @@
 const ErrorHandler = require("../utils/ErrorHandler");
+const logger = require("../utils/logger");
 
 module.exports = (err, req, res, next) => {
   if (res.headersSent) return next(err);
 
   err.statusCode = err.statusCode || (err.type === "entity.parse.failed" ? 400 : 500);
   err.message = err.message || "Internal server error";
+  logger.error({ err, path: req.originalUrl, method: req.method }, "request failed");
 
   // wrong mongodb id error
   if (err.name === "CastError") {
