@@ -1,0 +1,72 @@
+[
+  {
+    "name": "Aero Knit Training Tee",
+    "category": "Training",
+    "price": 58,
+    "color": "Olive / Stone",
+    "description": "A lightweight, sweat-wicking training tee built for hard sessions and easy miles."
+  },
+  {
+    "name": "Pace Runner 02",
+    "category": "Running",
+    "price": 142,
+    "color": "Bone / Olive",
+    "description": "Responsive everyday runners with a featherweight upper and supportive road-ready sole."
+  },
+  {
+    "name": "Interval 5 Short",
+    "category": "Training",
+    "price": 64,
+    "color": "Near Black",
+    "description": "A four-way stretch training short with a secure phone pocket."
+  },
+  {
+    "name": "Studio Rib Layer",
+    "category": "Studio",
+    "price": 76,
+    "color": "Muted Gold",
+    "description": "Soft ribbed support for warm-ups, cool-downs, and studio practice."
+  },
+  {
+    "name": "Field Utility Overshirt",
+    "category": "Outdoor",
+    "price": 118,
+    "color": "Olive",
+    "description": "A relaxed outer layer with a weather-resistant finish."
+  },
+  {
+    "name": "Motion Training Set",
+    "category": "Training",
+    "price": 72,
+    "color": "Ivory / Olive",
+    "description": "A lightweight training essential for flexible movement and conditioning."
+  },
+  {
+    "name": "Baseline Reversible Jersey",
+    "category": "Basketball",
+    "price": 86,
+    "color": "Olive / Ivory",
+    "description": "A relaxed reversible basketball jersey with breathable mesh and an easy fit."
+  },
+  {
+    "name": "Paint Court Short",
+    "category": "Basketball",
+    "price": 68,
+    "color": "Near Black / Gold",
+    "description": "Lightweight court shorts with room to move and a secure waistband."
+  },
+  {
+    "name": "Rise Court Trainer",
+    "category": "Basketball",
+    "price": 128,
+    "color": "Ivory / Olive",
+    "description": "A supportive court trainer with a stable base for quick cuts."
+  },
+  {
+    "name": "Striker Turf Trainer",
+    "category": "Football",
+    "price": 116,
+    "color": "Near Black / Gold",
+    "description": "A low-profile football trainer with a grippy outsole for turf sessions."
+  }
+]

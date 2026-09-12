@@ -1,4 +1,6 @@
 const express = require("express");
+const fs = require("fs");
+const path = require("path");
 const rateLimit = require("express-rate-limit");
 const repository = require("../store/repository");
 const ErrorHandler = require("../utils/ErrorHandler");
@@ -17,6 +19,10 @@ const MAX_MESSAGE_LENGTH = 2000;
 const MAX_HISTORY_ITEMS = 6;
 const MAX_HISTORY_ITEM_LENGTH = 1000;
 const MODEL = process.env.GEMINI_MODEL || "gemini-3.6-flash";
+const MAX_OUTPUT_TOKENS = Number(process.env.GEMINI_MAX_OUTPUT_TOKENS || 800);
+const storefrontCatalogue = JSON.parse(
+  fs.readFileSync(path.join(__dirname, "..", "data", "catalogue.json"), "utf8")
+);
 
 const SYSTEM_PROMPT = `You are Goodsly Support, a concise and friendly customer-support agent for the Goodsly sports and performance-gear storefront.
 Only answer questions about Goodsly products, catalogue availability, sizing guidance, orders, shipping, delivery, returns, exchanges, checkout, and account help.
@@ -27,10 +33,12 @@ Never claim to have changed an order, issued a refund, or accessed a customer ac
 const catalogueContext = async () => {
   try {
     const products = await repository.products.list();
-    const safeProducts = products.slice(0, 40).map((product) => ({
+    const sourceProducts = products.length ? products : storefrontCatalogue;
+    const safeProducts = sourceProducts.slice(0, 40).map((product) => ({
       name: String(product.name || "").slice(0, 120),
       category: String(product.category || "").slice(0, 80),
       description: String(product.description || "").slice(0, 240),
+      color: String(product.color || "").slice(0, 80),
       price: product.price,
       stock: product.stock,
     }));
@@ -89,7 +97,7 @@ router.post(
           body: JSON.stringify({
             systemInstruction: { parts: [{ text: `${SYSTEM_PROMPT}\n\nCatalogue context:\n${context}` }] },
             contents,
-            generationConfig: { temperature: 0.2, maxOutputTokens: 300 },
+            generationConfig: { temperature: 0.2, maxOutputTokens: MAX_OUTPUT_TOKENS },
           }),
           signal: controller.signal,
         }
