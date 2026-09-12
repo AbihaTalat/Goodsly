@@ -11,6 +11,7 @@ import {
 import { categories, products } from "../data/products";
 import { addCartItem, loadCart, loadWishlist, saveCart, saveWishlist } from "../utils/store";
 import ColorSwatches from "../components/ColorSwatches";
+import SupportAgent from "../components/SupportAgent";
 import "../styles/shop.css";
 
 const Header = ({ cartCount, wishlistCount, onCart, onMenu, onSearch, onWishlist }) => (
@@ -202,6 +203,7 @@ const Shop = () => {
       {isMenuOpen && <MobileMenu onClose={() => setIsMenuOpen(false)} />}
       {isWishlistOpen && <WishlistDrawer items={wishlistProducts} onClose={() => setIsWishlistOpen(false)} onRemove={toggleWishlist} onAdd={(product) => { addToCart(product); setIsWishlistOpen(false); }} />}
       {isCartOpen && <CartDrawer items={cart} onClose={() => setIsCartOpen(false)} onRemove={removeFromCart} onQuantity={updateQuantity} />}
+      <SupportAgent />
     </div>
   );
 };

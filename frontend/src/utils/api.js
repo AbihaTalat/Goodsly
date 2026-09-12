@@ -29,6 +29,10 @@ export const api = {
   sendMessage: (id, body) => request(`/chat/conversations/${id}/messages`, { method: "POST", body: JSON.stringify({ body }) }),
   createPayment: (body) => request("/payments/checkout", { method: "POST", body: JSON.stringify(body) }),
   paymentProviders: () => request("/payments/providers"),
+  support: (message, history = []) => request("/ai/support", {
+    method: "POST",
+    body: JSON.stringify({ message, history }),
+  }),
   uploadImage: async (file) => {
     const token = window.localStorage.getItem("goodsly-token");
     const formData = new FormData();

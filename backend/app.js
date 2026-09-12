@@ -17,6 +17,7 @@ const notificationRoutes = require("./routes/notifications");
 const analyticsRoutes = require("./routes/analytics");
 const uploadRoutes = require("./routes/uploads");
 const paymentRoutes = require("./routes/payments");
+const aiRoutes = require("./routes/ai");
 const { router: pushRoutes } = require("./routes/push");
 const errorMiddleware = require("./middleware/error");
 const repository = require("./store/repository");
@@ -67,6 +68,7 @@ app.use("/api/v1/analytics", analyticsRoutes);
 app.use("/api/v1/uploads", uploadRoutes);
 app.use("/api/v1/payments", paymentRoutes);
 app.use("/api/v1/push", pushRoutes);
+app.use("/api/v1/ai", aiRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ success: false, message: "Route not found" });

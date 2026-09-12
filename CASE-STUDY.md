@@ -6,6 +6,10 @@ Goodsly is a React and Express commerce platform for performance clothing and sp
 
 This document separates shipped functionality from planned platform extensions. That distinction keeps the case study technically accurate while showing how Goodsly can grow into the complete multi-vendor architecture.
 
+### AI support agent
+
+The Shop page includes a compact SupportAgent widget backed by `POST /api/v1/ai/support`. The public endpoint is IP rate-limited and accepts bounded conversation history. The server calls Gemini through its REST API using the server-only `GEMINI_API_KEY`, injects a bounded snapshot of repository products as context, and applies a system prompt restricted to Goodsly catalogue, orders, shipping, checkout, and returns support. Missing credentials return `503`; the agent cannot mutate orders or access account data.
+
 ## Goals
 
 1. Make performance products easy to discover through categories, search, tags, and colorways.
@@ -40,6 +44,8 @@ flowchart LR
     Router --> Pages[Shop, detail, checkout, dashboard]
     Pages --> Local[Local cart and wishlist storage]
     Pages --> API[Express REST API]
+    Pages --> Support[SupportAgent widget]
+    Support --> AI[Gemini REST API via server]
     API --> Auth[JWT and bcrypt authentication]
     API --> Repository[Repository abstraction]
     Repository --> Mongo[(MongoDB via Mongoose)]
@@ -139,6 +145,7 @@ The API is organized by business capability:
 - `/api/v1/orders` — authenticated order creation, listing, and status updates
 - `/api/v1/admin` — admin-only summary and order operations
 - `/api/v1/health` — deployment health signal
+- `/api/v1/ai/support` — public, rate-limited Gemini support endpoint
 
 Authentication is enforced by middleware that verifies a JWT and attaches the public user to the request. Role authorization is applied to seller and admin routes.
 
@@ -154,6 +161,7 @@ Authentication is enforced by middleware that verifies a JWT and attaches the pu
 | Authentication | JWT, bcrypt |
 | Configuration | dotenv |
 | Frontend state | React state and local storage for cart/wishlist |
+| AI support | Gemini REST API via server-side `fetch` (no SDK dependency) |
 
 ### Optional platform extensions
 

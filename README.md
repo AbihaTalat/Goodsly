@@ -27,6 +27,7 @@ The repository contains a working storefront and API foundation with optional in
 - In-app notifications, Web Push subscription endpoint, and service worker
 - Seller analytics, multipart image uploads with Cloudinary or explicit local fallback
 - Payment provider abstraction with Stripe intents and signed webhook validation; PayPal configuration is detected but not silently simulated
+- Gemini-powered public support agent on the Shop page for scoped product, order, shipping, and returns questions
 - Docker and GitHub Actions CI workflow
 - Local setup configuration and MongoDB Atlas example configuration
 
@@ -89,6 +90,7 @@ Goodsly/
    ```
 
    Set `DB_URL` to a local MongoDB database or a complete Atlas URI. Add a strong `JWT_SECRET` before using authentication outside development.
+   To enable the Shop support agent, set `GEMINI_API_KEY` (server-side only) and optionally change `GEMINI_MODEL`. Without a key, the support endpoint returns a clear `503` and the key is never sent to the browser.
 
 4. Start the API:
 
@@ -128,6 +130,9 @@ Goodsly/
 | POST | `/api/v1/payments/checkout` | Create a configured Stripe payment intent |
 | POST | `/api/v1/payments/webhooks/stripe` | Verify Stripe webhook signatures |
 | GET | `/api/v1/push/config` | Check Web Push configuration |
+| POST | `/api/v1/ai/support` | Public, rate-limited Gemini support for Goodsly catalogue, orders, shipping, and returns |
+
+The support endpoint validates message size, includes a bounded catalogue snapshot from the repository, and uses a restricted system prompt. It does not perform account or order mutations; customers should contact the Goodsly team for account-specific actions.
 
 ## Validation
 
