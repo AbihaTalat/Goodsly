@@ -1,0 +1,148 @@
+# Goodsly
+
+Goodsly is a multi-vendor sports and performance-gear storefront built with React, Express, and MongoDB. The product experience focuses on considered catalogue browsing, clear product colorways, a lightweight cart, and role-aware account workspaces for customers, sellers, and administrators.
+
+[![Frontend build](https://img.shields.io/badge/frontend-React%2019-61dafb)](./frontend)
+[![Backend](https://img.shields.io/badge/backend-Express%205-000000)](./backend)
+[![Database](https://img.shields.io/badge/database-MongoDB-47A248)](./backend/db/Database.js)
+
+## Current status
+
+The repository contains a working storefront and API foundation. Implemented behavior is listed below; advanced platform capabilities from the long-term case study are intentionally listed as roadmap items until their code, tests, and production configuration exist.
+
+### Implemented
+
+- React storefront with responsive catalogue and product detail pages
+- Product categories, text search, tags, and color-aware filtering
+- Named color swatches in catalogue cards and product details
+- Cart, quantity controls, wishlist, and checkout form
+- Customer, seller, and admin authentication with JWT
+- Password hashing with bcrypt
+- Seller product publishing
+- Admin order summary and status management
+- MongoDB persistence with a development fallback repository
+- CORS, bounded JSON parsing, centralized API errors, and health endpoint
+- Local setup configuration and MongoDB Atlas example configuration
+
+### Roadmap
+
+These capabilities are documented as the next implementation milestones, not as completed features:
+
+- Buyer-seller real-time messaging with Socket.IO
+- In-app and browser push notifications
+- Stripe and PayPal payment providers with webhook verification
+- Seller revenue and product analytics
+- Cloudinary or S3 image upload pipeline
+- Redis-backed WebSocket scaling
+- CI/CD workflows, Docker, and production deployment
+- Expanded monitoring, audit logging, request validation, and security hardening
+
+See the complete architecture and delivery plan in [CASE-STUDY.md](./CASE-STUDY.md).
+
+## Repository structure
+
+```text
+Goodsly/
+├── backend/
+│   ├── config/          Environment templates
+│   ├── db/              Mongoose connection
+│   ├── middleware/      Authentication and error handling
+│   ├── models/         User, product, and order schemas
+│   ├── routes/          Auth, product, order, and admin APIs
+│   ├── store/           MongoDB-aware repository and dev fallback
+│   └── server.js        API process entry point
+├── frontend/
+│   └── src/
+│       ├── components/  Auth and reusable storefront components
+│       ├── data/        Catalogue seed data
+│       ├── pages/       Storefront, checkout, account, and story pages
+│       └── utils/       API and local cart storage helpers
+├── CASE-STUDY.md
+└── package.json
+```
+
+## Requirements
+
+- Node.js 18 or newer
+- npm
+- MongoDB 7+ locally, or a MongoDB Atlas connection string
+
+## Local setup
+
+1. Install root dependencies:
+
+   ```bash
+   npm install
+   ```
+
+2. Install frontend dependencies:
+
+   ```bash
+   cd frontend
+   npm install
+   cd ..
+   ```
+
+3. Configure the backend:
+
+   ```bash
+   copy backend\config\.env.example backend\config\.env
+   ```
+
+   Set `DB_URL` to a local MongoDB database or a complete Atlas URI. Add a strong `JWT_SECRET` before using authentication outside development.
+
+4. Start the API:
+
+   ```bash
+   npm run dev
+   ```
+
+   The API runs at `http://localhost:8000`.
+
+5. In a second terminal, start the frontend:
+
+   ```bash
+   cd frontend
+   npm start
+   ```
+
+   The storefront runs at `http://localhost:3000`.
+
+## API overview
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| GET | `/api/v1/health` | API and storage health |
+| POST | `/api/v1/auth/register` | Create a customer or seller account |
+| POST | `/api/v1/auth/login` | Authenticate a user |
+| GET | `/api/v1/products` | List and filter products |
+| POST | `/api/v1/products` | Publish a product as seller/admin |
+| POST | `/api/v1/orders` | Create an authenticated order |
+| GET | `/api/v1/orders` | List the current user's orders |
+| PATCH | `/api/v1/orders/:id/status` | Update an order as seller/admin |
+| GET | `/api/v1/admin/summary` | View admin sales summary |
+
+## Validation
+
+Build the frontend with:
+
+```bash
+cd frontend
+npm run build
+```
+
+The backend can be smoke-tested with:
+
+```bash
+curl http://localhost:8000/api/v1/health
+```
+
+## Documentation
+
+- [Complete case study and architecture diagrams](./CASE-STUDY.md)
+- [Frontend setup](./frontend/README.md)
+- [Backend configuration template](./backend/config/.env.example)
+
+## License
+
+This project is currently published without a declared open-source license. Add a license before accepting external contributions or redistributing it.
