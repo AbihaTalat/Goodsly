@@ -8,6 +8,16 @@ const greeting = {
   text: "Hi! I’m Goodsly Support. Ask me about products, orders, shipping, or returns.",
 };
 
+const cleanSupportText = (text) => String(text || "")
+  .replace(/\*\*(.*?)\*\*/g, "$1")
+  .replace(/__(.*?)__/g, "$1")
+  .replace(/^\s*#{1,6}\s*/gm, "")
+  .replace(/^\s*[*+]\s+/gm, "• ")
+  .replace(/^\s*-\s+/gm, "• ")
+  .replace(/`([^`]+)`/g, "$1")
+  .replace(/\n{3,}/g, "\n\n")
+  .trim();
+
 const SupportAgent = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([greeting]);
@@ -53,7 +63,7 @@ const SupportAgent = () => {
           <div className="support-messages" aria-live="polite">
             {messages.map((item, index) => (
               <p className={`support-message ${item.role === "user" ? "support-message-user" : ""}`} key={`${item.role}-${index}`}>
-                {item.text}
+                {cleanSupportText(item.text)}
               </p>
             ))}
             {loading && <p className="support-message support-message-status">Goodsly Support is thinking…</p>}
