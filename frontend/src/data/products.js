@@ -80,7 +80,7 @@ export const products = [
     color: "Olive / Ivory",
     badge: "New",
     image:
-      "https://images.unsplash.com/photo-1518407613690-d9fc990e795f?auto=format&fit=crop&w=900&q=85",
+      "https://upload.wikimedia.org/wikipedia/commons/9/9d/Italia_women_national_basketball_team_1948.jpg",
     description:
       "A relaxed reversible jersey with breathable mesh and an easy fit for pickup games, warm-ups and off-court days.",
     tags: ["basketball", "basket", "jersey", "court", "hoops", "mesh"],
