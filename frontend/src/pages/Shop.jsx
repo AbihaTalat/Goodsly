@@ -23,9 +23,9 @@ const Header = ({ cartCount, wishlistCount, onCart, onMenu, onSearch, onWishlist
       goods<span>ly</span>
     </Link>
     <nav className="main-nav">
-      <a href="#shop">Shop</a>
-      <a href="#collections">Collections</a>
-      <a href="#story">Why Goodsly</a>
+      <a href="#shop">Explore</a>
+      <a href="#sellers">Meet sellers</a>
+      <a href="#story">Our approach</a>
       <Link to="/dashboard">Your account</Link>
     </nav>
     <div className="header-actions">
@@ -60,8 +60,9 @@ const ProductCard = ({ product, liked, onLike, onAdd }) => (
     </div>
     <div className="product-meta">
       <div>
-        <p className="eyebrow">{product.category}</p>
+        <p className="eyebrow">Independent seller · {product.category}</p>
         <Link to={`/product/${product.id}`} className="product-name">{product.name}</Link>
+        <p className="seller-label">Curated by <strong>Goodsly marketplace</strong></p>
         <ColorSwatches color={product.color} className="product-color" />
       </div>
       <strong>${product.price}</strong>
@@ -113,9 +114,9 @@ const MobileMenu = ({ onClose }) => (
         <button onClick={onClose} aria-label="Close menu"><FiX /></button>
       </div>
       <nav className="mobile-nav">
-        <a href="#shop" onClick={onClose}>Shop <FiArrowRight /></a>
-        <a href="#collections" onClick={onClose}>Field notes <FiArrowRight /></a>
-        <Link to="/story" onClick={onClose}>Why Goodsly <FiArrowRight /></Link>
+        <a href="#shop" onClick={onClose}>Explore products <FiArrowRight /></a>
+        <a href="#sellers" onClick={onClose}>Meet sellers <FiArrowRight /></a>
+        <Link to="/story" onClick={onClose}>Our approach <FiArrowRight /></Link>
         <Link to="/dashboard" onClick={onClose}>Your account <FiArrowRight /></Link>
       </nav>
       <p className="mobile-menu-note">Performance essentials for the pace you choose.</p>
@@ -168,21 +169,21 @@ const Shop = () => {
         {search && <section className="search-results collection-section"><div className="section-heading"><div><p className="eyebrow">Search results</p><h2>Made for<br /><em>“{search}”.</em></h2></div><p>{visibleProducts.length} {visibleProducts.length === 1 ? "product" : "products"} matched your search.</p></div><div className="product-grid">{visibleProducts.map((product) => <ProductCard key={`search-${product.id}`} product={product} liked={wishlist.includes(product.id)} onLike={toggleWishlist} onAdd={addToCart} />)}</div></section>}
         <section className="hero">
           <div className="hero-copy">
-            <p className="eyebrow">Spring / Summer 2025</p>
-            <h1>Move with<br /><em>intention.</em></h1>
-            <p className="hero-intro">Performance essentials for the pace you choose. Thoughtfully designed, quietly confident.</p>
-            <a className="primary-button" href="#shop">Explore the collection <FiArrowRight /></a>
+            <p className="eyebrow">Independent sellers · one place</p>
+            <h1>Find something<br /><em>worth keeping.</em></h1>
+            <p className="hero-intro">Discover products from independent sellers, all in one place. A marketplace worth exploring.</p>
+            <a className="primary-button" href="#shop">Explore products <FiArrowRight /></a>
           </div>
           <div className="hero-image">
             <img src="https://images.unsplash.com/photo-1538805060514-97d9cc17730c?auto=format&fit=crop&w=1400&q=90" alt="Athlete stretching outdoors" />
             <span className="hero-note">01 — The everyday<br />athlete</span>
           </div>
         </section>
-        <section className="marquee" aria-label="Goodsly values"><span>BUILT FOR THE LONG RUN</span><i>✳</i><span>LESS, BUT BETTER</span><i>✳</i><span>GOODS FOR MOVEMENT</span></section>
+        <section className="marquee" aria-label="Goodsly values"><span>INDEPENDENT SELLERS</span><i>✳</i><span>UNEXPECTED FINDS</span><i>✳</i><span>ONE PLACE TO EXPLORE</span></section>
         {!search && <section className="collection-section" id="shop">
           <div className="section-heading">
-            <div><p className="eyebrow">The essentials</p><h2>Made to move<br /><em>with you.</em></h2></div>
-            <p>Reliable layers and considered details for whatever your day demands.</p>
+            <div><p className="eyebrow">The catalogue</p><h2>Worth a<br /><em>look.</em></h2></div>
+            <p>A considered mix of products from independent sellers, made for the things you do every day.</p>
           </div>
           <div className="category-tabs">
             {categories.map((category) => <button key={category} className={activeCategory === category ? "active" : ""} onClick={() => setActiveCategory(category)}>{category}</button>)}
@@ -192,13 +193,27 @@ const Shop = () => {
             {visibleProducts.map((product) => <ProductCard key={product.id} product={product} liked={wishlist.includes(product.id)} onLike={toggleWishlist} onAdd={addToCart} />)}
           </div>
         </section>}
+        <section className="seller-section" id="sellers">
+          <div className="section-heading"><div><p className="eyebrow">The marketplace</p><h2>Meet the<br /><em>sellers.</em></h2></div><p>Independent sellers. Unique products. One place to discover them.</p></div>
+          <div className="seller-grid">
+            {["Running", "Studio", "Outdoor"].map((category, index) => (
+              <article className="seller-card" key={category}>
+                <div className={`seller-card-image seller-card-image-${index + 1}`}><span>{String(index + 1).padStart(2, "0")}</span></div>
+                <p className="eyebrow">Independent seller</p>
+                <h3>{category} edit</h3>
+                <p>Small-batch finds and considered essentials from sellers worth knowing.</p>
+                <a href="#shop" className="text-link">Explore collection <FiArrowRight /></a>
+              </article>
+            ))}
+          </div>
+        </section>
         <section className="approach" id="story">
           <div className="approach-image"><img src="https://images.unsplash.com/photo-1461896836934-ffe607ba8211?auto=format&fit=crop&w=1000&q=85" alt="Marathon athlete running outdoors" /></div>
-          <div className="approach-copy"><p className="eyebrow">Our approach</p><h2>Good design<br /><em>goes further.</em></h2><p>We make fewer things, with better materials and a longer life in mind. No noise. Just gear that earns its place in your kit.</p><Link to="/story" className="text-link">Read our story <FiArrowRight /></Link></div>
+          <div className="approach-copy"><p className="eyebrow">Why Goodsly</p><h2>A marketplace<br /><em>worth exploring.</em></h2><p>We bring independent sellers into one thoughtful catalogue so discovery feels personal, useful and a little unexpected.</p><Link to="/story" className="text-link">Read our story <FiArrowRight /></Link></div>
         </section>
         <section className="newsletter" id="collections"><p className="eyebrow">Field notes</p><h2>Useful ideas for<br /><em>moving well.</em></h2><p className="newsletter-copy">Share a training thought, a gear-care tip or a lesson from your last session. Your note helps shape the next Goodsly field note.</p><form onSubmit={submitNewsletter} autoComplete="off"><textarea required name="fieldNote" value={fieldNote} onChange={(event) => setFieldNote(event.target.value)} placeholder="Write your field note..." aria-label="Write your field note" autoComplete="off" rows="3" /><button type="submit" aria-label="Submit field note"><FiArrowRight /></button></form><small>{newsletterMessage || "Tell us what is helping you move well."}</small></section>
       </main>
-      <footer><Link to="/shop" className="wordmark">goods<span>ly</span></Link><p>Performance, with a point of view.</p><span>© 2025 Goodsly</span></footer>
+      <footer><Link to="/shop" className="wordmark">GOOD<span>SLY</span></Link><p>A marketplace worth exploring.</p><span>© 2025 Goodsly</span></footer>
       {notice && <div className="toast">{notice}</div>}
       {isMenuOpen && <MobileMenu onClose={() => setIsMenuOpen(false)} />}
       {isWishlistOpen && <WishlistDrawer items={wishlistProducts} onClose={() => setIsWishlistOpen(false)} onRemove={toggleWishlist} onAdd={(product) => { addToCart(product); setIsWishlistOpen(false); }} />}

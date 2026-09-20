@@ -5,7 +5,7 @@ import { api } from "../utils/api";
 const MAX_MESSAGE_LENGTH = 2000;
 const greeting = {
   role: "model",
-  text: "Hi! I’m Goodsly Support. Ask me about products, orders, shipping, or returns.",
+  text: "Hi, I’m goodsly guide. What are you looking for? I can help with products, sellers, orders, shipping, or returns.",
 };
 
 const cleanSupportText = (text) => String(text || "")
@@ -55,8 +55,8 @@ const SupportAgent = () => {
         <section className="support-panel" aria-label="Goodsly Support">
           <div className="support-heading">
             <div>
-              <p className="eyebrow">Goodsly Support</p>
-              <h2>How can we help?</h2>
+              <p className="eyebrow">goodsly guide</p>
+              <h2>What are you looking for?</h2>
             </div>
             <button type="button" onClick={() => setIsOpen(false)} aria-label="Close support chat"><FiX /></button>
           </div>
@@ -80,12 +80,12 @@ const SupportAgent = () => {
             />
             <button type="submit" aria-label="Send support message" disabled={loading || !input.trim()}><FiSend /></button>
           </form>
-          <small className="support-disclaimer">AI support covers Goodsly products, orders, shipping, and returns.</small>
+          <small className="support-disclaimer">Try: “find me something under $50” or “recommend a seller”.</small>
         </section>
       )}
       <button className="support-launcher" type="button" onClick={() => setIsOpen((open) => !open)} aria-expanded={isOpen} aria-label={isOpen ? "Close Goodsly Support" : "Open Goodsly Support"}>
         {isOpen ? <FiX /> : <FiMessageCircle />}
-        <span>{isOpen ? "Close" : "Support"}</span>
+        <span>{isOpen ? "Close" : "goodsly guide"}</span>
       </button>
     </div>
   );
